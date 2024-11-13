@@ -8,8 +8,8 @@
   "author": "Phillip Kruger <phillip.kruger@phillip-kruger.com> (https://www.phillip-kruger.com)",
   "homepage": "https://quarkus.io",
   "license": "Apache-2.0",
-  "main": "qui-switch.js",
-  "module": "qui-switch.js",
+  "main": "qui-directory-tree.js",
+  "module": "qui-directory-tree.js",
   "type": "module",
   "keywords": [
     "Quarkus",
@@ -22,7 +22,9 @@
     "start": "web-dev-server --config web-dev-server.config.js"
   },
   "dependencies": {
-    "lit": "~3.2.0",
+    "lit": "~3.2.0"
+  },
+  "optionalDependencies": {
     "@vaadin/grid": "^24.0.0",
     "@vaadin/icon": "^24.0.0",
     "@vaadin/icons": "^24.0.0"
