@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+  <head>
+    <title>Directory tree web component demo</title>
+    <script type="module" src="./qui-directory-tree.js"></script>
+    <style>
+        .row {
+            display: flex;
+            align-items: baseline;
+        }
+        .col {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+    </style>
+
+  </head>
+  <body>
+    <h1>Directory Tree</h1>
+        <!-- Use the directory tree component -->
+        <qui-directory-tree></qui-directory-tree>
+
+        <script>
+            // Define sample data for the directory structure
+            const directoryData = [
+            {
+                name: 'Folder1',
+                type: 'folder',
+                children: [
+                { name: 'File1.txt', type: 'file' },
+                {
+                    name: 'SubFolder1',
+                    type: 'folder',
+                    children: [{ name: 'File2.txt', type: 'file' }],
+                },
+                ],
+            },
+            { name: 'File3.txt', type: 'file' },
+            ];
+
+            // Set the directory data to the component
+            const treeComponent = document.querySelector('qui-directory-tree');
+            treeComponent.directory = directoryData;
+
+            treeComponent.addEventListener('file-select', (event) => {
+                console.log('File selected:', event.detail.file);
+            });
+        </script>
+  </body>
+</html>
