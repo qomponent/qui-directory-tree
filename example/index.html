@@ -30,6 +30,8 @@
     <!-- Add a button to trigger the file selection -->
     <div class="row">
       <button id="selectFileButton">Select "Folder1/SubFolder1/File2.txt"</button>
+      <button id="collapseAllButton">Collapse All</button>
+      <button id="expandAllButton">Expand All</button>
     </div>
 
     <script>
@@ -50,19 +52,27 @@
         { name: 'File3.txt', type: 'file' },
       ];
 
-      // Get a reference to the directory tree component
       const treeComponent = document.querySelector('#directoryTree');
       treeComponent.directory = directoryData;
 
-      // Add an event listener for the button click to programmatically select a file
       document.querySelector('#selectFileButton').addEventListener('click', () => {
         const filePath = 'Folder1/SubFolder1/File2.txt';
         treeComponent.selectFile(filePath);
       });
 
-      // Listen for file selection events
+
+      document.querySelector('#collapseAllButton').addEventListener('click', () => {
+        treeComponent.collapseAll();
+      });
+
+      document.querySelector('#expandAllButton').addEventListener('click', () => {
+        treeComponent.expandAll();
+      });
+
       treeComponent.addEventListener('file-select', (event) => {
         console.log('File selected:', event.detail.file);
+        console.log('Is it a file?', event.detail.isFile);
+        console.log('Node type:', event.detail.nodeType);
       });
     </script>
   </body>
