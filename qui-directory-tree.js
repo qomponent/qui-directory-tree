@@ -3,25 +3,28 @@ import { LitElement, html, css } from 'lit';
 class QuiDirectoryTree extends LitElement {
   static properties = {
     directory: { type: Array }, // Directory data
-    selectedPath: { type: String } // Currently selected path
+    selectedPath: { type: String }, // Currently selected path
+    folderSelectable: { type: Boolean } // Whether folders are selectable
   };
 
   constructor() {
     super();
     this.directory = [];
     this.selectedPath = '';
+    this.folderSelectable = false;  // Default: folders are not selectable
     this._collapsedPaths = new Set(); // Track collapsed nodes
   }
 
   static styles = css`
     :host {
-      --tree-node-font-family: 'Arial', sans-serif;
-      --tree-node-font-size: 14px;
-      --tree-icon-size: 16px;
-      --tree-node-bg-hover: #f0f0f0;
-      --tree-node-bg-selected: #d0e8ff;
-      --tree-node-color: black;
-      --tree-node-selected-color: black;
+
+      --tree-node-font-family: var(--lumo-font-family, 'Arial', sans-serif);
+      --tree-node-font-size: var(--lumo-font-size-m, 14px);
+      --tree-icon-size: var(--lumo-icon-size-s, 16px);
+      --tree-node-bg-hover: var(--lumo-contrast-5pct, #f0f0f0);
+      --tree-node-bg-selected: var(--lumo-primary-color-50pct, #d0e8ff);
+      --tree-node-color: var(--lumo-body-text-color, black);
+      --tree-node-selected-color: var(--lumo-body-text-color, black);
       --folder-icon-closed: 📁;
       --folder-icon-open: 📂;
       --file-icon: 📄;
@@ -52,6 +55,12 @@ class QuiDirectoryTree extends LitElement {
     .icon {
       font-size: var(--tree-icon-size);
     }
+    .label {
+      cursor: pointer;
+    }
+    .label.disabled {
+      cursor: default;
+    }
   `;
 
   render() {
@@ -62,21 +71,25 @@ class QuiDirectoryTree extends LitElement {
     return nodes.map((node) => {
       const path = currentPath ? `${currentPath}/${node.name}` : node.name;
       const isCollapsed = this._collapsedPaths.has(path);
-
+      const isFolder = node.type === 'folder';
+      const isSelectable = isFolder ? this.folderSelectable : true;
+  
       return html`
         <li>
           <div class="node ${this.selectedPath === path ? 'selected' : ''}">
-            <span
-              class="icon"
-              @click="${(e) => this._toggleCollapse(e, path)}"
-            >
-              ${node.type === 'folder'
+            <span class="icon" @click="${(e) => this._toggleCollapse(e, path)}">
+              ${isFolder
                 ? isCollapsed
                   ? this._getIcon('folder-icon-closed')
                   : this._getIcon('folder-icon-open')
                 : this._getIcon('file-icon')}
             </span>
-            <span @click="${(e) => this._onNodeClick(e, path, node)}">${node.name}</span>
+            <span
+              class="label ${!isSelectable ? 'disabled' : ''}"
+              @click="${isSelectable ? (e) => this._onNodeClick(e, path, node) : null}"
+            >
+              ${node.name}
+            </span>
           </div>
           ${node.children && !isCollapsed
             ? html`<ul class="tree">${this._renderTree(node.children, path)}</ul>`
@@ -85,6 +98,7 @@ class QuiDirectoryTree extends LitElement {
       `;
     });
   }
+  
 
   _getIcon(variableName) {
     return getComputedStyle(this).getPropertyValue(`--${variableName}`).trim() || '📄';
@@ -102,6 +116,11 @@ class QuiDirectoryTree extends LitElement {
 
   _onNodeClick(event, path, node) {
     event.stopPropagation();
+    if (node.type === 'folder' && !this.folderSelectable) {
+      // Ignore click if folders are not selectable
+      return;
+    }
+
     this.selectedPath = path;
     this.dispatchEvent(
       new CustomEvent('file-select', {
