@@ -2,17 +2,19 @@ import { LitElement, html, css } from 'lit';
 
 class QuiDirectoryTree extends LitElement {
   static properties = {
-    directory: { type: Array }, // Directory data
-    selectedPath: { type: String }, // Currently selected path
-    folderSelectable: { type: Boolean } // Whether folders are selectable
+    directory: { type: Array },
+    selectedPath: { type: String },
+    folderSelectable: { type: Boolean },
+    contextMenuItems: { type: Array } // Context menu items for files
   };
 
   constructor() {
     super();
     this.directory = [];
     this.selectedPath = '';
-    this.folderSelectable = false;  // Default: folders are not selectable
-    this._collapsedPaths = new Set(); // Track collapsed nodes
+    this.folderSelectable = false;
+    this.contextMenuItems = []; // Default: no context menu
+    this._collapsedPaths = new Set();
   }
 
   static styles = css`
@@ -37,7 +39,6 @@ class QuiDirectoryTree extends LitElement {
       font-size: var(--tree-node-font-size);
     }
     .node {
-      cursor: pointer;
       padding: 5px;
       border-radius: 5px;
       display: flex;
@@ -55,16 +56,36 @@ class QuiDirectoryTree extends LitElement {
     .icon {
       font-size: var(--tree-icon-size);
     }
+
     .label {
       cursor: pointer;
     }
+
     .label.disabled {
       cursor: default;
+    }
+
+    .context-menu {
+      position: absolute;
+      background: var(--lumo-base-color, white);
+      border: 1px solid var(--lumo-base-color, white);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+    .context-menu-item {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .context-menu-item:hover {
+      background-color: var(--tree-node-bg-hover);
     }
   `;
 
   render() {
-    return html`<ul class="tree">${this._renderTree(this.directory, '')}</ul>`;
+    return html`
+      <ul class="tree">${this._renderTree(this.directory, '')}</ul>
+      ${this._renderContextMenu()}
+    `;
   }
 
   _renderTree(nodes, currentPath) {
@@ -73,10 +94,13 @@ class QuiDirectoryTree extends LitElement {
       const isCollapsed = this._collapsedPaths.has(path);
       const isFolder = node.type === 'folder';
       const isSelectable = isFolder ? this.folderSelectable : true;
-  
+
       return html`
         <li>
-          <div class="node ${this.selectedPath === path ? 'selected' : ''}">
+          <div
+            class="node ${this.selectedPath === path ? 'selected' : ''}"
+            @contextmenu="${(e) => this._onContextMenu(e, path, node)}"
+          >
             <span class="icon" @click="${(e) => this._toggleCollapse(e, path)}">
               ${isFolder
                 ? isCollapsed
@@ -98,7 +122,26 @@ class QuiDirectoryTree extends LitElement {
       `;
     });
   }
-  
+
+  _renderContextMenu() {
+    if (!this._contextMenuData) return '';
+    const { x, y, filePath, node } = this._contextMenuData;
+
+    return html`
+      <div class="context-menu" style="top: ${y}px; left: ${x}px;">
+        ${this.contextMenuItems.map(
+          (item) => html`
+            <div
+              class="context-menu-item"
+              @click="${() => this._onContextMenuItemClick(item, filePath, node)}"
+            >
+              ${item.title}
+            </div>
+          `
+        )}
+      </div>
+    `;
+  }
 
   _getIcon(variableName) {
     return getComputedStyle(this).getPropertyValue(`--${variableName}`).trim() || '📄';
@@ -116,12 +159,10 @@ class QuiDirectoryTree extends LitElement {
 
   _onNodeClick(event, path, node) {
     event.stopPropagation();
-    if (node.type === 'folder' && !this.folderSelectable) {
-      // Ignore click if folders are not selectable
-      return;
-    }
+    if (node.type === 'folder' && !this.folderSelectable) return;
 
     this.selectedPath = path;
+    this._contextMenuData = null; // Hide context menu on selection
     this.dispatchEvent(
       new CustomEvent('file-select', {
         detail: {
@@ -133,6 +174,25 @@ class QuiDirectoryTree extends LitElement {
         composed: true
       })
     );
+  }
+
+  _onContextMenu(event, filePath, node) {
+    event.preventDefault();
+    if (node.type !== 'file' || this.contextMenuItems.length === 0) return;
+
+    this._contextMenuData = {
+      x: event.clientX,
+      y: event.clientY,
+      filePath,
+      node
+    };
+    this.requestUpdate();
+  }
+
+  _onContextMenuItemClick(item, filePath, node) {
+    this._contextMenuData = null;
+    this.requestUpdate();
+    if (item.callback) item.callback(filePath, node);
   }
 
   selectFile(filePath) {
@@ -151,7 +211,7 @@ class QuiDirectoryTree extends LitElement {
   }
 
   expandAll() {
-    this._collapsedPaths.clear(); // Remove all paths from the collapsed set
+    this._collapsedPaths.clear();
     this.requestUpdate();
   }
 

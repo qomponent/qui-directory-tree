@@ -74,6 +74,17 @@
         console.log('Is it a file?', event.detail.isFile);
         console.log('Node type:', event.detail.nodeType);
       });
+
+      treeComponent.contextMenuItems = [
+        {
+          title: 'Open',
+          callback: (filePath, node) => console.log(`Opening ${filePath}`)
+        },
+        {
+          title: 'Delete',
+          callback: (filePath, node) => console.log(`Deleting ${filePath}`)
+        }
+      ];
     </script>
   </body>
 </html>
