@@ -1,50 +1,69 @@
 <!DOCTYPE html>
+<html lang="en">
   <head>
-    <title>Directory tree web component demo</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Directory Tree Web Component Demo</title>
     <script type="module" src="./qui-directory-tree.js"></script>
     <style>
-        .row {
-            display: flex;
-            align-items: baseline;
-        }
-        .col {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+      .row {
+        display: flex;
+        align-items: baseline;
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      button {
+        padding: 10px 20px;
+        cursor: pointer;
+      }
     </style>
-
   </head>
   <body>
     <h1>Directory Tree</h1>
-        <!-- Use the directory tree component -->
-        <qui-directory-tree></qui-directory-tree>
+    
+    <!-- Use the directory tree component -->
+    <qui-directory-tree id="directoryTree"></qui-directory-tree>
 
-        <script>
-            // Define sample data for the directory structure
-            const directoryData = [
+    <!-- Add a button to trigger the file selection -->
+    <div class="row">
+      <button id="selectFileButton">Select "Folder1/SubFolder1/File2.txt"</button>
+    </div>
+
+    <script>
+      // Define sample data for the directory structure
+      const directoryData = [
+        {
+          name: 'Folder1',
+          type: 'folder',
+          children: [
+            { name: 'File1.txt', type: 'file' },
             {
-                name: 'Folder1',
-                type: 'folder',
-                children: [
-                { name: 'File1.txt', type: 'file' },
-                {
-                    name: 'SubFolder1',
-                    type: 'folder',
-                    children: [{ name: 'File2.txt', type: 'file' }],
-                },
-                ],
+              name: 'SubFolder1',
+              type: 'folder',
+              children: [{ name: 'File2.txt', type: 'file' }],
             },
-            { name: 'File3.txt', type: 'file' },
-            ];
+          ],
+        },
+        { name: 'File3.txt', type: 'file' },
+      ];
 
-            // Set the directory data to the component
-            const treeComponent = document.querySelector('qui-directory-tree');
-            treeComponent.directory = directoryData;
+      // Get a reference to the directory tree component
+      const treeComponent = document.querySelector('#directoryTree');
+      treeComponent.directory = directoryData;
 
-            treeComponent.addEventListener('file-select', (event) => {
-                console.log('File selected:', event.detail.file);
-            });
-        </script>
+      // Add an event listener for the button click to programmatically select a file
+      document.querySelector('#selectFileButton').addEventListener('click', () => {
+        const filePath = 'Folder1/SubFolder1/File2.txt';
+        treeComponent.selectFile(filePath);
+      });
+
+      // Listen for file selection events
+      treeComponent.addEventListener('file-select', (event) => {
+        console.log('File selected:', event.detail.file);
+      });
+    </script>
   </body>
 </html>
