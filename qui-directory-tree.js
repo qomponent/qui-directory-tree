@@ -2,26 +2,31 @@ import { LitElement, html, css } from 'lit';
 
 class QuiDirectoryTree extends LitElement {
   static properties = {
-    directory: { type: Array }, // Directory data
-    selectedPath: { type: String } // Currently selected path
+    directory: { type: Array },
+    selectedPath: { type: String },
+    folderSelectable: { type: Boolean },
+    contextMenuItems: { type: Array } // Context menu items for files
   };
 
   constructor() {
     super();
     this.directory = [];
     this.selectedPath = '';
-    this._collapsedPaths = new Set(); // Track collapsed nodes
+    this.folderSelectable = false;
+    this.contextMenuItems = []; // Default: no context menu
+    this._collapsedPaths = new Set();
   }
 
   static styles = css`
     :host {
-      --tree-node-font-family: 'Arial', sans-serif;
-      --tree-node-font-size: 14px;
-      --tree-icon-size: 16px;
-      --tree-node-bg-hover: #f0f0f0;
-      --tree-node-bg-selected: #d0e8ff;
-      --tree-node-color: black;
-      --tree-node-selected-color: black;
+
+      --tree-node-font-family: var(--lumo-font-family, 'Arial', sans-serif);
+      --tree-node-font-size: var(--lumo-font-size-m, 14px);
+      --tree-icon-size: var(--lumo-icon-size-s, 16px);
+      --tree-node-bg-hover: var(--lumo-contrast-5pct, #f0f0f0);
+      --tree-node-bg-selected: var(--lumo-primary-color-50pct, #d0e8ff);
+      --tree-node-color: var(--lumo-body-text-color, black);
+      --tree-node-selected-color: var(--lumo-body-text-color, black);
       --folder-icon-closed: 📁;
       --folder-icon-open: 📂;
       --file-icon: 📄;
@@ -34,7 +39,6 @@ class QuiDirectoryTree extends LitElement {
       font-size: var(--tree-node-font-size);
     }
     .node {
-      cursor: pointer;
       padding: 5px;
       border-radius: 5px;
       display: flex;
@@ -52,31 +56,64 @@ class QuiDirectoryTree extends LitElement {
     .icon {
       font-size: var(--tree-icon-size);
     }
+
+    .label {
+      cursor: pointer;
+    }
+
+    .label.disabled {
+      cursor: default;
+    }
+
+    .context-menu {
+      position: absolute;
+      background: var(--lumo-base-color, white);
+      border: 1px solid var(--lumo-base-color, white);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+    .context-menu-item {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .context-menu-item:hover {
+      background-color: var(--tree-node-bg-hover);
+    }
   `;
 
   render() {
-    return html`<ul class="tree">${this._renderTree(this.directory, '')}</ul>`;
+    return html`
+      <ul class="tree">${this._renderTree(this.directory, '')}</ul>
+      ${this._renderContextMenu()}
+    `;
   }
 
   _renderTree(nodes, currentPath) {
     return nodes.map((node) => {
       const path = currentPath ? `${currentPath}/${node.name}` : node.name;
       const isCollapsed = this._collapsedPaths.has(path);
+      const isFolder = node.type === 'folder';
+      const isSelectable = isFolder ? this.folderSelectable : true;
 
       return html`
         <li>
-          <div class="node ${this.selectedPath === path ? 'selected' : ''}">
-            <span
-              class="icon"
-              @click="${(e) => this._toggleCollapse(e, path)}"
-            >
-              ${node.type === 'folder'
+          <div
+            class="node ${this.selectedPath === path ? 'selected' : ''}"
+            @contextmenu="${(e) => this._onContextMenu(e, path, node)}"
+          >
+            <span class="icon" @click="${(e) => this._toggleCollapse(e, path)}">
+              ${isFolder
                 ? isCollapsed
                   ? this._getIcon('folder-icon-closed')
                   : this._getIcon('folder-icon-open')
                 : this._getIcon('file-icon')}
             </span>
-            <span @click="${(e) => this._onNodeClick(e, path, node)}">${node.name}</span>
+            <span
+              class="label ${!isSelectable ? 'disabled' : ''}"
+              @click="${isSelectable ? (e) => this._onNodeClick(e, path, node) : null}"
+            >
+              ${node.name}
+            </span>
           </div>
           ${node.children && !isCollapsed
             ? html`<ul class="tree">${this._renderTree(node.children, path)}</ul>`
@@ -84,6 +121,26 @@ class QuiDirectoryTree extends LitElement {
         </li>
       `;
     });
+  }
+
+  _renderContextMenu() {
+    if (!this._contextMenuData) return '';
+    const { x, y, filePath, node } = this._contextMenuData;
+
+    return html`
+      <div class="context-menu" style="top: ${y}px; left: ${x}px;">
+        ${this.contextMenuItems.map(
+          (item) => html`
+            <div
+              class="context-menu-item"
+              @click="${() => this._onContextMenuItemClick(item, filePath, node)}"
+            >
+              ${item.title}
+            </div>
+          `
+        )}
+      </div>
+    `;
   }
 
   _getIcon(variableName) {
@@ -102,7 +159,10 @@ class QuiDirectoryTree extends LitElement {
 
   _onNodeClick(event, path, node) {
     event.stopPropagation();
+    if (node.type === 'folder' && !this.folderSelectable) return;
+
     this.selectedPath = path;
+    this._contextMenuData = null; // Hide context menu on selection
     this.dispatchEvent(
       new CustomEvent('file-select', {
         detail: {
@@ -114,6 +174,25 @@ class QuiDirectoryTree extends LitElement {
         composed: true
       })
     );
+  }
+
+  _onContextMenu(event, filePath, node) {
+    event.preventDefault();
+    if (node.type !== 'file' || this.contextMenuItems.length === 0) return;
+
+    this._contextMenuData = {
+      x: event.clientX,
+      y: event.clientY,
+      filePath,
+      node
+    };
+    this.requestUpdate();
+  }
+
+  _onContextMenuItemClick(item, filePath, node) {
+    this._contextMenuData = null;
+    this.requestUpdate();
+    if (item.callback) item.callback(filePath, node);
   }
 
   selectFile(filePath) {
@@ -132,7 +211,7 @@ class QuiDirectoryTree extends LitElement {
   }
 
   expandAll() {
-    this._collapsedPaths.clear(); // Remove all paths from the collapsed set
+    this._collapsedPaths.clear();
     this.requestUpdate();
   }
 
