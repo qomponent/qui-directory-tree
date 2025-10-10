@@ -4,6 +4,7 @@ class QuiDirectoryTree extends LitElement {
   static properties = {
     directory: { type: Array },
     selectedPath: { type: String },
+    fileSeparator: { type: String },
     folderSelectable: { type: Boolean },
     contextMenuItems: { type: Array } // Context menu items for files
   };
@@ -12,6 +13,7 @@ class QuiDirectoryTree extends LitElement {
     super();
     this.directory = [];
     this.selectedPath = '';
+    this.fileSeparator = '/';
     this.folderSelectable = false;
     this.contextMenuItems = []; // Default: no context menu
     this._collapsedPaths = new Set();
@@ -90,7 +92,7 @@ class QuiDirectoryTree extends LitElement {
 
   _renderTree(nodes, currentPath) {
     return nodes.map((node) => {
-      const path = currentPath ? `${currentPath}/${node.name}` : node.name;
+      const path = currentPath ? `${currentPath}${this.fileSeparator}${node.name}` : node.name;
       const isCollapsed = this._collapsedPaths.has(path);
       const isFolder = node.type === 'folder';
       const isSelectable = isFolder ? this.folderSelectable : true;
@@ -202,10 +204,10 @@ class QuiDirectoryTree extends LitElement {
   }
 
   _expandToPath(filePath) {
-    const parts = filePath.split('/');
+    const parts = filePath.split(this.fileSeparator);
     let path = '';
     for (let i = 0; i < parts.length - 1; i++) {
-      path = path ? `${path}/${parts[i]}` : parts[i];
+      path = path ? `${path}${this.fileSeparator}${parts[i]}` : parts[i];
       this._collapsedPaths.delete(path);
     }
   }
@@ -218,7 +220,7 @@ class QuiDirectoryTree extends LitElement {
   collapseAll() {
     const collectPaths = (nodes, currentPath = '') => {
       nodes.forEach((node) => {
-        const path = currentPath ? `${currentPath}/${node.name}` : node.name;
+        const path = currentPath ? `${currentPath}${this.fileSeparator}${node.name}` : node.name;
         if (node.children) {
           this._collapsedPaths.add(path);
           collectPaths(node.children, path);
